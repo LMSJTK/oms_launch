@@ -1,0 +1,33 @@
+# Environment files
+.env
+config/config.local.php
+
+# Upload directories
+uploads/*
+!uploads/.gitkeep
+content/*
+!content/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
