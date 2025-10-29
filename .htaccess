@@ -1,0 +1,83 @@
+# OMS Launch - Apache Configuration
+# This .htaccess works for both root and subdirectory deployments
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Automatically detect base path
+    RewriteBase /
+
+    # Allow direct access to API endpoints
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^api/.+\.php$ - [L]
+
+    # Allow direct access to launch.php
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^launch\.php$ - [L]
+
+    # Allow access to static assets
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule \.(js|css|jpg|jpeg|png|gif|ico|mp4|webm|ogg|svg|woff|woff2|ttf|eot)$ - [L]
+
+    # Allow access to uploaded content
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^(uploads|content)/.+ - [L]
+</IfModule>
+
+# Security: Deny access to sensitive files
+<FilesMatch "^(\.env|\.env\..*|\.git.*|schema\.sql|composer\.(json|lock))$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Deny access to config directory
+<IfModule mod_authz_core.c>
+    <DirectoryMatch "config">
+        Require all denied
+    </DirectoryMatch>
+</IfModule>
+
+# Deny access to includes directory
+<IfModule mod_authz_core.c>
+    <DirectoryMatch "includes">
+        Require all denied
+    </DirectoryMatch>
+</IfModule>
+
+# PHP Configuration
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 100M
+    php_value post_max_size 100M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 100M
+    php_value post_max_size 100M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    # Prevent MIME sniffing
+    Header set X-Content-Type-Options "nosniff"
+
+    # Prevent clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+
+    # Enable XSS protection
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# Follow symbolic links (required for some hosting)
+Options +FollowSymLinks

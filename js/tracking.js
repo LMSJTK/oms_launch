@@ -7,7 +7,7 @@
     'use strict';
 
     // API base URL - will be set by launch.php
-    const API_BASE = window.location.origin + '/api';
+    const API_BASE = window.OMS_TRACKING.apiBase || (window.location.origin + '/api');
 
     // Initialize tracking
     function initTracking() {

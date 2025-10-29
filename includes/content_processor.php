@@ -182,6 +182,9 @@ class ContentProcessor {
         // Read the tracking script
         $trackingScript = file_get_contents(__DIR__ . '/../js/tracking.js');
 
+        // Get base URL for API calls
+        $baseUrl = defined('BASE_URL') ? BASE_URL : '';
+
         // Create initialization script
         $initScript = <<<SCRIPT
 
@@ -191,6 +194,7 @@ window.OMS_TRACKING = {
     contentId: {$contentId},
     trackingLinkId: null,
     recipientId: null,
+    apiBase: '{$baseUrl}/api',
     interactions: [],
     initialized: false
 };
