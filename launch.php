@@ -136,13 +136,14 @@ function displayVideoPlayer($data) {
                 contentId: <?php echo $data['content_id']; ?>,
                 trackingLinkId: '<?php echo $data['unique_link_id']; ?>',
                 recipientId: <?php echo $data['recipient_id']; ?>,
+                apiBase: '<?php echo BASE_URL; ?>/api',
                 interactions: [],
                 initialized: false
             };
 
             const video = document.getElementById('contentVideo');
             const completeButton = document.getElementById('completeButton');
-            const API_BASE = window.location.origin + '/api';
+            const API_BASE = window.OMS_TRACKING.apiBase;
 
             // Track view on load
             fetch(API_BASE + '/track_view.php', {
