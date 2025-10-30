@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS deployments CASCADE;
 DROP TABLE IF EXISTS oms_tracking_links CASCADE;
 DROP TABLE IF EXISTS recipient_tag_scores CASCADE;
 DROP TABLE IF EXISTS content_tags CASCADE;
+DROP TABLE IF EXISTS tags CASCADE;
 DROP TABLE IF EXISTS content CASCADE;
 DROP TABLE IF EXISTS recipient_group_members CASCADE;
 DROP TABLE IF EXISTS recipient_groups CASCADE;
@@ -119,30 +120,40 @@ CREATE TABLE content (
 
 CREATE INDEX idx_content_account_id ON content(account_id);
 
--- Content tags table (stores tags extracted by Claude API)
+-- Tags table (normalized tag storage)
+CREATE TABLE tags (
+  id SERIAL PRIMARY KEY,
+  tag_name VARCHAR(100) NOT NULL UNIQUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_tags_tag_name ON tags(tag_name);
+
+-- Content tags table (many-to-many relationship between content and tags)
 CREATE TABLE content_tags (
   id SERIAL PRIMARY KEY,
   content_id INTEGER NOT NULL REFERENCES content(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  tag_name VARCHAR(100) NOT NULL,
+  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE ON UPDATE CASCADE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(content_id, tag_name)
+  UNIQUE(content_id, tag_id)
 );
 
 CREATE INDEX idx_content_tags_content_id ON content_tags(content_id);
-CREATE INDEX idx_content_tags_tag_name ON content_tags(tag_name);
+CREATE INDEX idx_content_tags_tag_id ON content_tags(tag_id);
 
 -- Recipient tag scores (tracks performance on specific topics/tags)
 CREATE TABLE recipient_tag_scores (
   id SERIAL PRIMARY KEY,
   recipient_id INTEGER NOT NULL REFERENCES recipients(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  tag_name VARCHAR(100) NOT NULL,
+  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE ON UPDATE CASCADE,
   score INTEGER NOT NULL DEFAULT 0,
   attempts INTEGER NOT NULL DEFAULT 0,
   last_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(recipient_id, tag_name)
+  UNIQUE(recipient_id, tag_id)
 );
 
 CREATE INDEX idx_recipient_tag_scores_recipient ON recipient_tag_scores(recipient_id);
+CREATE INDEX idx_recipient_tag_scores_tag ON recipient_tag_scores(tag_id);
 
 -- Deployments table
 CREATE TABLE deployments (
