@@ -6,11 +6,13 @@ A headless PHP-based content management and tracking platform for educational an
 
 - **Multi-format Content Support**: SCORM packages, HTML zips, raw HTML, and videos (MP4)
 - **AI-Powered Tagging**: Automatic content analysis and tagging using Claude API
+- **Normalized Tag System**: Centralized tag management with many-to-many relationships
 - **Interaction Tracking**: Track user interactions with tagged content elements
 - **SCORM API Hijacking**: Intercept and track SCORM API calls for standardized content
 - **Event Publishing**: Publish tracking events to AWS SNS
 - **Launch Links**: Generate unique tracking links for recipients
 - **Score Tracking**: Track completion scores and tag-specific performance
+- **Tag Analytics**: View recipient performance by topic/tag
 
 ## Project Structure
 
@@ -18,6 +20,8 @@ A headless PHP-based content management and tracking platform for educational an
 oms_launch/
 ├── api/                          # API endpoints
 │   ├── create_launch_link.php    # Create content launch links
+│   ├── get_recipient_scores.php  # Get tag scores for a recipient
+│   ├── get_tags.php               # Get all tags or content tags
 │   ├── track_completion.php      # Track content completion
 │   ├── track_view.php            # Track content views
 │   └── upload_content.php        # Upload and process content
@@ -274,11 +278,21 @@ All calls are intercepted and tracked.
 - **users**: Platform users (admin/manager)
 - **recipients**: Content recipients
 - **content**: Content library
-- **content_tags**: AI-extracted tags
+- **tags**: Normalized tag storage (centralized)
+- **content_tags**: Many-to-many link between content and tags
 - **oms_tracking_links**: Launch links and tracking
 - **recipient_tag_scores**: Tag-specific performance scores
 - **deployments**: Content deployment campaigns
 - **deployment_tracking**: Campaign tracking
+
+### Tag System
+
+The platform uses a normalized tag system:
+- **tags** table stores unique tags (e.g., "phishing", "ransomware")
+- **content_tags** links content to tags (many-to-many)
+- **recipient_tag_scores** tracks performance on each tag
+
+See [TAG_SYSTEM.md](TAG_SYSTEM.md) for detailed documentation.
 
 ## API Reference
 
@@ -335,6 +349,81 @@ Track content completion (called by tracking JavaScript).
       "value": "user_answer"
     }
   ]
+}
+```
+
+### GET /api/get_tags.php
+
+Get all tags or tags for specific content.
+
+**Query Parameters:**
+- `content_id` (optional): Get tags for specific content
+
+**Example - Get all tags:**
+```bash
+curl -X GET http://example.com/api/get_tags.php
+```
+
+**Example - Get tags for content:**
+```bash
+curl -X GET "http://example.com/api/get_tags.php?content_id=1"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "tags": [
+      {
+        "id": 1,
+        "tag_name": "phishing",
+        "content_count": 5
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+### GET /api/get_recipient_scores.php
+
+Get tag-specific scores for a recipient.
+
+**Query Parameters:**
+- `recipient_id` (required): Recipient ID
+
+**Example:**
+```bash
+curl -X GET "http://example.com/api/get_recipient_scores.php?recipient_id=1"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "recipient": {
+      "id": 1,
+      "email": "user@example.com",
+      "name": "John Doe"
+    },
+    "tag_scores": [
+      {
+        "tag_id": 1,
+        "tag_name": "phishing",
+        "score": 8,
+        "attempts": 10,
+        "success_rate": 80.00
+      }
+    ],
+    "statistics": {
+      "total_tags_attempted": 1,
+      "total_score": 8,
+      "total_attempts": 10,
+      "overall_success_rate": 80.00
+    }
+  }
 }
 ```
 

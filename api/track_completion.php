@@ -50,9 +50,12 @@ try {
 
     $db->update($sql, [$score, json_encode($interactions), $trackingLinkId]);
 
-    // Get content tags
+    // Get content tags (using normalized structure)
     $contentTags = $db->fetchAll(
-        "SELECT tag_name FROM content_tags WHERE content_id = ?",
+        "SELECT ct.tag_id, t.tag_name
+         FROM content_tags ct
+         JOIN tags t ON t.id = ct.tag_id
+         WHERE ct.content_id = ?",
         [$trackingLink['content_id']]
     );
 
@@ -61,18 +64,18 @@ try {
 
     if ($passed && !empty($contentTags)) {
         foreach ($contentTags as $tagRow) {
-            $tagName = $tagRow['tag_name'];
+            $tagId = $tagRow['tag_id'];
 
             // Update or insert recipient tag score
-            $sql = "INSERT INTO recipient_tag_scores (recipient_id, tag_name, score, attempts, last_updated_at)
+            $sql = "INSERT INTO recipient_tag_scores (recipient_id, tag_id, score, attempts, last_updated_at)
                     VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
-                    ON CONFLICT (recipient_id, tag_name)
+                    ON CONFLICT (recipient_id, tag_id)
                     DO UPDATE SET
                         score = recipient_tag_scores.score + 1,
                         attempts = recipient_tag_scores.attempts + 1,
                         last_updated_at = CURRENT_TIMESTAMP";
 
-            $db->query($sql, [$trackingLink['recipient_id'], $tagName, 1]);
+            $db->query($sql, [$trackingLink['recipient_id'], $tagId, 1]);
         }
     }
 

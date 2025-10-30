@@ -229,29 +229,64 @@ SCRIPT;
 
     /**
      * Save tags to database
+     * Uses normalized tags structure:
+     * 1. Insert tag into tags table if it doesn't exist
+     * 2. Get tag ID
+     * 3. Create content_tags relationship
      */
     private function saveTags($contentId, $tags) {
         if (empty($tags)) {
             return;
         }
 
-        $stmt = $this->db->prepare(
-            "INSERT INTO content_tags (content_id, tag_name) VALUES (?, ?)
-             ON CONFLICT (content_id, tag_name) DO NOTHING"
-        );
-
         foreach ($tags as $tag) {
-            if (!empty($tag)) {
-                $stmt->execute([$contentId, trim($tag)]);
+            if (empty($tag)) {
+                continue;
             }
+
+            $tagName = trim($tag);
+
+            // Step 1: Insert tag into tags table if it doesn't exist
+            $tagStmt = $this->db->prepare(
+                "INSERT INTO tags (tag_name) VALUES (?)
+                 ON CONFLICT (tag_name) DO NOTHING
+                 RETURNING id"
+            );
+            $tagStmt->execute([$tagName]);
+            $result = $tagStmt->fetch();
+
+            // Get tag ID (either from insert or existing)
+            if ($result && isset($result['id'])) {
+                $tagId = $result['id'];
+            } else {
+                // Tag already exists, fetch its ID
+                $fetchStmt = $this->db->prepare("SELECT id FROM tags WHERE tag_name = ?");
+                $fetchStmt->execute([$tagName]);
+                $tagRow = $fetchStmt->fetch();
+                $tagId = $tagRow['id'];
+            }
+
+            // Step 2: Create content_tags relationship
+            $contentTagStmt = $this->db->prepare(
+                "INSERT INTO content_tags (content_id, tag_id) VALUES (?, ?)
+                 ON CONFLICT (content_id, tag_id) DO NOTHING"
+            );
+            $contentTagStmt->execute([$contentId, $tagId]);
         }
     }
 
     /**
      * Get content tags
+     * Returns array of tag names for a piece of content
      */
     public function getContentTags($contentId) {
-        $stmt = $this->db->prepare("SELECT tag_name FROM content_tags WHERE content_id = ?");
+        $stmt = $this->db->prepare(
+            "SELECT t.tag_name
+             FROM content_tags ct
+             JOIN tags t ON t.id = ct.tag_id
+             WHERE ct.content_id = ?
+             ORDER BY t.tag_name"
+        );
         $stmt->execute([$contentId]);
 
         $tags = [];
@@ -260,5 +295,22 @@ SCRIPT;
         }
 
         return $tags;
+    }
+
+    /**
+     * Get all tags with content count
+     * Useful for tag management/browsing
+     */
+    public function getAllTags() {
+        $stmt = $this->db->prepare(
+            "SELECT t.id, t.tag_name, COUNT(ct.content_id) as content_count
+             FROM tags t
+             LEFT JOIN content_tags ct ON ct.tag_id = t.id
+             GROUP BY t.id, t.tag_name
+             ORDER BY t.tag_name"
+        );
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 }
